@@ -10,6 +10,7 @@
 \usepackage{graphicx}
 \usepackage{dirtytalk}
 \usepackage{lipsum}
+\usepackage{subfig}
 
 \usetheme{default} % or try Darmstadt, Madrid, Warsaw, ...
 \usecolortheme{default} % or try albatross, beaver, crane, ...
@@ -103,7 +104,7 @@
   \onslide<2>{OKAY! But what does that mean?!?}
 \end{frame}
 
-\begin{frame}[fragile]{Monad error - example}
+\begin{frame}[fragile]{Monad error - Abstracting the monad}
   
   \onslide<2>{What if \it{denom} is 0 ?} \\ 
 
@@ -113,7 +114,7 @@
 
 \end{frame}
 
-\begin{frame}[fragile]{Monad error - example}
+\begin{frame}[fragile]{Monad error - Abstracting the monad}
 
   We can improve this using Option...
 
@@ -124,7 +125,7 @@
 
 \end{frame}
 
-\begin{frame}[fragile]{Monad error - example}
+\begin{frame}[fragile]{Monad error - Abstracting the monad}
 
   ...or Try...
 
@@ -136,7 +137,7 @@
 
 \end{frame}
 
-\begin{frame}[fragile]{Monad error - example}
+\begin{frame}[fragile]{Monad error - Abstracting the monad}
 
   ...or Future...
 
@@ -148,7 +149,7 @@
 
 \end{frame}
 
-\begin{frame}[fragile]{Monad error - example}
+\begin{frame}[fragile]{Monad error - Abstracting the monad}
 
   ...or Either...
 
@@ -160,7 +161,7 @@
 
 \end{frame}
 
-\begin{frame}[fragile]{Monad error - example}
+\begin{frame}[fragile]{Monad error - Abstracting the monad}
 
   ...or a custom result type (i.e. foundation Response)...
 
@@ -173,12 +174,12 @@
 \end{frame}
 
 
-\begin{frame}[fragile]{Monad error - example}
+\begin{frame}[fragile]{Monad error - Abstracting the monad}
 
   ... you get the idea.\\
 
   What if you are trying to write generic code (i.e. library)?\\
-  We should be able to abstract the method
+  We should be able to abstract it as much as possible.
 
   \begin{scalaCode}
     def divide???(num: Int, denom: Int): F[Int] =
@@ -189,17 +190,19 @@
 \end{frame}
 
 
-\begin{frame}{Monad error - example}
+\begin{frame}{Monad error - Abstracting the monad}
 
-  By the power of the Monad!!!
-
+  
   \begin{center}
+    By the power of the Monad!!! \\
+    \vline
+
     \includegraphics[scale=0.33]{figures/he-man.jpg}
   \end{center}
 
 \end{frame}
 
-\begin{frame}[fragile]{Monad error - example}
+\begin{frame}[fragile]{Monad error - Abstracting the monad}
 
   \begin{scalaCode}
     def divideF[F[_]](num: Int, denom: Int)(
@@ -211,7 +214,7 @@
 
 \end{frame}
 
-\begin{frame}[fragile]{Monad error - example}
+\begin{frame}[fragile]{Monad error - Abstracting the monad}
 
   \begin{scalaCode}
     def getNum: Try[Int] = ???
@@ -226,11 +229,144 @@
 
 \end{frame}
 
-\begin{frame}{Monad error - example}
+\begin{frame}{Monad error - Abstracting the monad}
 
   \begin{center}
     \includegraphics[scale=0.66]{figures/magic.jpeg}
   \end{center}
+
+\end{frame}
+
+
+\begin{frame}[fragile]{Monad error - Useful methods}
+  \begin{scalaCode}
+
+  // pure
+  MonadError[Try, Throwable].pure(1)
+  // scala.util.Try[Int] = Success(1)
+
+  // raiseError
+  MonadError[Try, Throwable].raiseError(new Throwable("error"))
+  // scala.util.Try[Nothing] = Failure(java.lang.Throwable: error)
+ 
+  \end{scalaCode}
+\end{frame}
+
+
+\begin{frame}[fragile]{Monad error - Useful methods}
+  \begin{scalaCode}
+  // fromEither / fromTry / fromOption / fromValidated
+
+  MonadError[Try, Throwable].fromEither(Right(123)) 
+  // scala.util.Try[Int] = Success(123)
+
+  MonadError[Try, Throwable].fromOption(None, new Throwable("empty"))
+  // scala.util.Try[Nothing] = Failure(java.lang.Throwable: empty)
+ 
+  \end{scalaCode}
+
+\end{frame}
+
+\begin{frame}[fragile]{Monad error - Useful methods}
+  \begin{scalaCode}
+
+  // catchNonFatal
+  MonadError[Try, Throwable].catchNonFatal(1 / 0)
+  // scala.util.Try[Int] =
+  //    Failure(java.lang.ArithmeticException: / by zero)
+  \end{scalaCode}
+
+\end{frame}
+
+\begin{frame}[fragile]{Monad error - Useful methods}
+  \begin{scalaCode}
+
+  // handleError / handleErrorWith / recover / recoverWith
+  MonadError[Try, Throwable]
+    .catchNonFatal(1 / 0)
+    .recover {
+      case _ : ArithmeticException => 0
+    }
+  // scala.util.Try[Int] = Success(0)
+
+  \end{scalaCode}
+
+\end{frame}
+
+
+\begin{frame}[fragile]{Monad error - Useful methods}
+  \begin{scalaCode}
+
+  MonadError[Try, Throwable]
+    .pure(123)
+    .attempt
+  // scala.util.Try[Either[Throwable,Int]] =
+  //    Success(Right(123))
+
+  MonadError[Try, Throwable]
+    .raiseError(new Throwable("error"))
+    .attempt 
+  // scala.util.Try[Either[Throwable,Nothing]] =
+  //    Success(Left(java.lang.Throwable: error))
+
+  \end{scalaCode}
+
+\end{frame}
+
+\begin{frame}[fragile]{Monad error - Abstracting the error}
+  Our code is still not totally generic. \\
+  We are restricted by the error type.
+
+\end{frame}
+
+\begin{frame}[fragile]{Monad error - Abstracting the error}
+  \begin{scalaCode}
+  trait UIError[A] {
+    def errorFromString(str: String): A
+
+    def errorFromThrowable(thr: Throwable): A
+  }
+
+  object UIError {
+    implicit val throwableInstance: UIError[Throwable] = ??
+    implicit val stringInstance: UIError[String] = ???
+  }
+  \end{scalaCode}
+
+
+\end{frame}
+
+
+\begin{frame}[fragile]{Monad error - Abstracting the error}
+
+  \begin{scalaCode}
+  def divideF[F[_], E](num: Int, denom: Int)(
+    implicit M: MonadError[F, E], Err: UIError[E]): F[Int] = {
+    if (denom == 0) M.raiseError(Err.errorFromString("Division by 0")))
+    else M.pure(num / denom)
+  }
+
+  divideF[Try, Throwable](1, 0)
+  // scala.util.Try[Int] = Failure(java.lang.Throwable: Division by 0)
+  
+  divideF[Either[String, ?], String](1, 0) 
+  // scala.util.Either[String,Int] = Left(Division by 0)
+
+  \end{scalaCode}
+\end{frame}
+
+
+\begin{frame}{Questionary time}
+
+  Which one do you feel like?
+
+  \begin{figure}%
+    \centering
+    \subfloat[]{{\includegraphics[height=4cm]{figures/monad-wat.jpg} }}%
+    \qquad
+    \subfloat[]{{ \includegraphics[height=4cm]{figures/monad-l-jackson.jpg} }}%
+  \end{figure}
+
 
 \end{frame}
 
