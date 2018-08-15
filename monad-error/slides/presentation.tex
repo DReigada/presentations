@@ -1,0 +1,237 @@
+\documentclass[13pt]{beamer}
+
+\usepackage{pgfpages}
+\usepackage{minted}
+\usepackage[T1]{fontenc}
+\usepackage[default]{lato}
+\usepackage{lmodern}
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{graphicx}
+\usepackage{dirtytalk}
+\usepackage{lipsum}
+
+\usetheme{default} % or try Darmstadt, Madrid, Warsaw, ...
+\usecolortheme{default} % or try albatross, beaver, crane, ...
+\usefonttheme{default} % or try serif, structurebold, ...
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{caption}[numbered]
+
+% For presenter notes
+%\setbeameroption{show notes on second screen}
+
+
+\addtobeamertemplate{navigation symbols}{}{%
+  \usebeamerfont{footline}%
+  \usebeamercolor[fg]{footline}%
+  \hspace{1em}%
+  \insertframenumber/\inserttotalframenumber
+  }
+
+\newcommand\Wider[2][3em]{%
+\makebox[\linewidth][c]{%
+  \begin{minipage}{\dimexpr\textwidth+#1\relax}
+  \raggedright#2
+  \end{minipage}%
+  }%
+}
+  
+\title{Type Classes in Scala}
+\subtitle{What? Why? How?}
+\author{Daniel Reigada}
+\institute{IST - Programming Languages}
+% \date{Date of Presentation}
+
+% pygmentize -L styles
+\usemintedstyle{lovelace}
+
+\usepackage{xcolor}
+
+
+\color{white}
+
+\definecolor{backgroundColor}{HTML}{FFFFFF} 
+\definecolor{titleBackgroundColor}{HTML}{15414C} 
+\definecolor{titleColor}{HTML}{FFFFFF} 
+\definecolor{textColor}{HTML}{4A5659} 
+
+
+\definecolor{codeBackground}{HTML}{e7e7d6} 
+\definecolor{codeBorderColor}{HTML}{e7e7d6} 
+
+\setbeamercolor{background canvas}{bg=backgroundColor}
+
+\setbeamercolor{titlelike}{parent=structure, bg=titleBackgroundColor, fg=titleColor}
+\setbeamercolor{normal text}{fg=textColor}
+
+
+\makeatletter
+\renewenvironment{minted@colorbg}[1]{
+\setlength{\fboxsep}{\z@}
+\def\minted@bgcol{#1}
+\noindent
+\begin{lrbox}{\minted@bgbox}
+\begin{minipage}{\linewidth}}
+{\end{minipage}
+\end{lrbox}%
+\colorbox{\minted@bgcol}{\usebox{\minted@bgbox}}}
+\makeatother
+
+\newminted[scalaCode]{scala}{fontsize=\footnotesize}
+\newminted[haskellCode]{haskell}{fontsize=\scriptsize, xleftmargin=-20pt}%, bgcolor=codeBackground, frame=single, framesep=30\fboxrule, rulecolor=\color{textColor}}
+\newminted[javaCode]{java}{fontsize=\scriptsize}%, bgcolor=codeBackground, frame=single, framesep=30\fboxrule, rulecolor=\color{textColor}}
+
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+\begin{frame}{Monad error}
+
+  A typeclass defined that allows one to abstract over error-handling monads. \\
+
+  \onslide<2>{But what does that mean?}
+
+\end{frame}
+
+\begin{frame}{Monad error}
+
+  It allows the creation of generic code, that would otherwise return errors wrapped in a specific monad. \\
+
+  \onslide<2>{OKAY! But what does that mean?!?}
+\end{frame}
+
+\begin{frame}[fragile]{Monad error - example}
+  
+  \onslide<2>{What if \it{denom} is 0 ?} \\ 
+
+  \begin{scalaCode}
+    def divide(num: Int, denom: Int): Int = num / denom
+  \end{scalaCode}
+
+\end{frame}
+
+\begin{frame}[fragile]{Monad error - example}
+
+  We can improve this using Option...
+
+  \begin{scalaCode}
+    def divide(num: Int, denom: Int): Option[Int] =
+      if(denom == 0) None else Some(num / denom)
+  \end{scalaCode}
+
+\end{frame}
+
+\begin{frame}[fragile]{Monad error - example}
+
+  ...or Try...
+
+  \begin{scalaCode}
+    def divideTry(num: Int, denom: Int): Try[Int] =
+      if (denom == 0) Failure(new Throwable("Division by 0"))
+      else Success(num / denom)
+  \end{scalaCode}
+
+\end{frame}
+
+\begin{frame}[fragile]{Monad error - example}
+
+  ...or Future...
+
+  \begin{scalaCode}
+    def divideFuture(num: Int, denom: Int): Future[Int] =
+      if (denom == 0) Future.failed(new Throwable("Division by 0"))
+      else Future.successful(num / denom)
+  \end{scalaCode}
+
+\end{frame}
+
+\begin{frame}[fragile]{Monad error - example}
+
+  ...or Either...
+
+  \begin{scalaCode}
+    def divideEither(num: Int, denom: Int): Either[String, Int] =
+      if (denom == 0) Left("Division by 0")
+      else Right(num / denom)
+  \end{scalaCode}
+
+\end{frame}
+
+\begin{frame}[fragile]{Monad error - example}
+
+  ...or a custom result type (i.e. foundation Response)...
+
+  \begin{scalaCode}
+    def divideEither(num: Int, denom: Int): Result[Int] =
+      if (denom == 0) Result.error("Division by 0")
+      else Result.success(num / denom)
+  \end{scalaCode}
+
+\end{frame}
+
+
+\begin{frame}[fragile]{Monad error - example}
+
+  ... you get the idea.\\
+
+  What if you are trying to write generic code (i.e. library)?\\
+  We should be able to abstract the method
+
+  \begin{scalaCode}
+    def divide???(num: Int, denom: Int): F[Int] =
+      if (denom == 0) ERROR_CASE
+      else SUCCESS_CASE
+  \end{scalaCode}
+
+\end{frame}
+
+
+\begin{frame}{Monad error - example}
+
+  By the power of the Monad!!!
+
+  \begin{center}
+    \includegraphics[scale=0.33]{figures/he-man.jpg}
+  \end{center}
+
+\end{frame}
+
+\begin{frame}[fragile]{Monad error - example}
+
+  \begin{scalaCode}
+    def divideF[F[_]](num: Int, denom: Int)(
+        implicit M: MonadError[F, Throwable]): F[Int] = {
+      if (denom == 0) M.raiseError(new Throwable("Division by 0"))
+      else M.pure(num / denom)
+    }
+  \end{scalaCode}
+
+\end{frame}
+
+\begin{frame}[fragile]{Monad error - example}
+
+  \begin{scalaCode}
+    def getNum: Try[Int] = ???
+    def getDenom: Try[Int] = ???
+
+    for {
+      num <- getNum
+      denom <- getDenom
+      result <- divideF[Try](num, denom)
+    } yield result
+  \end{scalaCode}
+
+\end{frame}
+
+\begin{frame}{Monad error - example}
+
+  \begin{center}
+    \includegraphics[scale=0.66]{figures/magic.jpeg}
+  \end{center}
+
+\end{frame}
+
+\end{document}
