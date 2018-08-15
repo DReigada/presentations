@@ -1,0 +1,362 @@
+\documentclass[13pt]{beamer}
+
+\usepackage{pgfpages}
+\usepackage{minted}
+\usepackage[T1]{fontenc}
+\usepackage[default]{lato}
+\usepackage{lmodern}
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{graphicx}
+\usepackage{dirtytalk}
+\usepackage{lipsum}
+
+\usetheme{default} % or try Darmstadt, Madrid, Warsaw, ...
+\usecolortheme{default} % or try albatross, beaver, crane, ...
+\usefonttheme{default} % or try serif, structurebold, ...
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{caption}[numbered]
+
+% For presenter notes
+%\setbeameroption{show notes on second screen}
+
+
+\addtobeamertemplate{navigation symbols}{}{%
+  \usebeamerfont{footline}%
+  \usebeamercolor[fg]{footline}%
+  \hspace{1em}%
+  \insertframenumber/\inserttotalframenumber
+  }
+
+\newcommand\Wider[2][3em]{%
+\makebox[\linewidth][c]{%
+  \begin{minipage}{\dimexpr\textwidth+#1\relax}
+  \raggedright#2
+  \end{minipage}%
+  }%
+}
+  
+\title{Type Classes in Scala}
+\subtitle{What? Why? How?}
+\author{Daniel Reigada}
+\institute{IST - Programming Languages}
+% \date{Date of Presentation}
+
+% pygmentize -L styles
+\usemintedstyle{lovelace}
+
+\usepackage{xcolor}
+
+
+\color{white}
+
+\definecolor{backgroundColor}{HTML}{FFFFFF} 
+\definecolor{titleBackgroundColor}{HTML}{15414C} 
+\definecolor{titleColor}{HTML}{FFFFFF} 
+\definecolor{textColor}{HTML}{4A5659} 
+
+
+\definecolor{codeBackground}{HTML}{e7e7d6} 
+\definecolor{codeBorderColor}{HTML}{e7e7d6} 
+
+\setbeamercolor{background canvas}{bg=backgroundColor}
+
+\setbeamercolor{titlelike}{parent=structure, bg=titleBackgroundColor, fg=titleColor}
+\setbeamercolor{normal text}{fg=textColor}
+
+
+\makeatletter
+\renewenvironment{minted@colorbg}[1]{
+\setlength{\fboxsep}{\z@}
+\def\minted@bgcol{#1}
+\noindent
+\begin{lrbox}{\minted@bgbox}
+\begin{minipage}{\linewidth}}
+{\end{minipage}
+\end{lrbox}%
+\colorbox{\minted@bgcol}{\usebox{\minted@bgbox}}}
+\makeatother
+
+\newminted[scalaCode]{scala}{fontsize=\footnotesize}
+\newminted[haskellCode]{haskell}{fontsize=\scriptsize, xleftmargin=-20pt}%, bgcolor=codeBackground, frame=single, framesep=30\fboxrule, rulecolor=\color{textColor}}
+\newminted[javaCode]{java}{fontsize=\scriptsize}%, bgcolor=codeBackground, frame=single, framesep=30\fboxrule, rulecolor=\color{textColor}}
+
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+\begin{frame}{Questions I would like answer}
+
+  \begin{enumerate}
+    \item What is type class?
+    \item Why should you use type classes?
+    \item How to use type class in Scala?
+  \end{enumerate}
+
+\end{frame}
+
+\begin{frame}{What is a type class?}
+  \note{
+    Well, but object oriented classes are just that!
+
+    Yes, they a mean to the same end (or at least similar ends)
+    What's so different about type classes?
+  }
+
+  From Wikipedia: \\
+  \say{A type system construct that supports ad hoc polymorphism.} \\ \\
+
+  \onslide<2, 3>{But classes in object oriented languages are just that!} \\ \\
+
+  \onslide<3>{What's so different about type classes?}
+  
+\end{frame}
+
+\begin{frame}[fragile]{What is a type class?}
+  \note{
+    Type classes are similiar to interfaces in the way they add
+    information and operations on top of types.
+
+    But they differ in the way they are defined and implemented.\\
+    With interfaces the class needs to extend the interface and implement the methods. \\
+    While with typeclasses the type and the typeclass for the type are deffined separatly. \\
+
+    Implementations of typeclasses are called Instances.
+  }
+   
+  \begin{columns}[c]
+    \hspace{-10pt}
+    \column{(\dimexpr\paperwidth-80pt)/2}
+      \begin{haskellCode}
+        class Writable a where
+          write :: a -> String
+
+
+
+
+        data Name = Name String String
+
+        instance Writable Name where
+          write (Name firstName lastName) =
+            firstName ++ " " ++ lastName
+      \end{haskellCode}
+
+    \column{(\dimexpr\paperwidth+30pt)/2}
+      \begin{javaCode}
+        interface Writable {
+          public String write();
+        }
+
+
+        
+        class Name implements Writable {
+          String firstName, lastName;
+
+          public String write(){
+            return firstName + " " + lastName;
+          }
+        }
+      \end{javaCode}
+  \end{columns}
+
+
+
+  % Type classes are similar to interfaces.
+
+  % Type classes instances definitions are separed from the type defitiions.
+
+
+
+\end{frame}
+
+\begin{frame}[fragile]{Why type classes? - Modularity}
+  \note{
+  }
+
+  Why should a list be concerned in implementing RandomAccess, Cloneable and Serializable? \\
+
+  \begin{javaCode}
+    public class ArrayList<E> extends AbstractList<E>
+        implements List<E>, RandomAccess, Cloneable, java.io.Serializable {
+        /* ... */
+      }
+  \end{javaCode}
+\end{frame}
+
+\begin{frame}[fragile]{Why type classes? - Extending existing types}
+  \note{
+    We can add functions over existing types without changing the type itself
+  }
+
+  \begin{haskellCode}
+    data MyType = MyType String Int
+
+    -- somewhere else, far from the definition:
+    instance Show MyType where
+      show (MyType s i) = s ++ ", " ++ (show i)
+  \end{haskellCode}
+
+
+\end{frame}
+
+\begin{frame}[fragile]{Why type classes? - Generic code}
+  \note{
+    That means it's really hard to make things like:
+       add :: t -> t -> t with an interface
+  }
+
+  We would like add to only add numbers of the same type: \\
+
+  \begin{javaCode}
+    interface Num {
+      Num add (Num i);
+    }
+
+    class Int implements Num {
+      public Int add(Num i) { /*...*/ }
+      
+      // does not override add:
+      // public Int add(Int i) { /*...*/ }
+    }
+  \end{javaCode}
+
+\end{frame}
+
+\begin{frame}[fragile]{Why type classes? - Generic code}
+  \note{
+    Boilerplate and harder to understand code
+  }
+
+  Solution in java: \\
+
+  \begin{javaCode}
+    interface Num<Impl> {
+      Impl add (Impl i);
+    }
+    
+    class Int implements Num<Int> {
+      public Int add(Int i) { /*...*/ }
+    }
+  \end{javaCode}
+
+\end{frame}
+
+\begin{frame}[fragile]{Why type classes? - Generic code}
+  \note{
+    Boilerplate and harder to understand code
+  }
+
+  Solution in Haskell: \\
+
+  \begin{haskellCode}
+      class Numero t where
+        add :: t -> t -> t
+
+      instance Num Int where
+        add a b = a + b
+  \end{haskellCode}
+
+\end{frame}
+
+
+\begin{frame}[fragile]{How to use type classes? (in Scala)}
+  \note {
+  }
+
+  A simple type class:
+  \begin{scalaCode}
+    trait Show[A] {
+      def show(a: A): String
+    }
+
+    val intInstance = new Show[Int] {
+      override def show(a: Int) = s"Int: " + a
+    }
+
+    intInstance.show(123)
+    // res0: String = Int: 123
+    
+  \end{scalaCode}
+\end{frame}
+
+\begin{frame}[fragile]{Aside - Scala implicits}
+  \note {
+  }
+
+  \begin{scalaCode}
+    def method(str: String)(implicit strImplicit: String) =
+      str + strImplicit
+    
+    method("parameter1")
+    // error: could not find implicit value for parameter
+    // strImplicit: String
+    // method("parameter1")
+    // ^
+    
+  \end{scalaCode}
+\end{frame}
+
+\begin{frame}[fragile]{Aside - Scala implicits}
+  \note {
+  }
+
+  \begin{scalaCode}
+    def method(str: String)(implicit strImplicit: String) =
+      str + strImplicit
+    
+    implicit val string = "implicitString"
+    method("parameter1")
+    // res0: String = parameter1implicitString
+    
+  \end{scalaCode}
+\end{frame}
+
+\begin{frame}[fragile]{How to use type classes? (in Scala)}
+  \note {
+  }
+
+  \begin{scalaCode}
+    trait Show[A] {
+      def show(a: A): String
+    }
+
+    object Show {
+      def show[A](a: A)(implicit sh: Show[A]) = sh.show(a)
+    }
+
+    implicit val intInstance = new Show[Int] {
+      override def show(a: Int) = s"Int: " + a
+    }
+
+    Show.show(123)
+    // res0: String = Int: 123
+  \end{scalaCode}
+\end{frame}
+
+
+\begin{frame}[fragile]{How to use type classes? (in Scala)}
+  \note {
+  }
+
+  Using implicit classes:
+
+  \begin{scalaCode}
+    implicit class ShowOps[A](a: A)(implicit sh: Show[A]) {
+      def show: String = sh.show(a)
+    }
+
+    123.show
+    // res0: String = Int: 123
+  \end{scalaCode}
+\end{frame}
+
+\begin{frame}{How to use type classes? (in Scala)}
+  \note {
+  }
+  Live demo/examples
+\end{frame}
+
+\end{document}
